@@ -1,6 +1,14 @@
-let gameloop;
+let gameLoop;
 let game;
 let snake;
+
+$(function() {
+    initGame();
+    $(document).keydown(onKeyDown);
+    $('#start-button').click(startGame);
+});
+
+// BEGIN RENDERING FUNCTIONS
 
 function createGameboard() {
     const gameBoard = $('#game-board');
@@ -8,7 +16,7 @@ function createGameboard() {
         const row = $('<tr></tr>');
         for (let j = 0; j < game.size; j++) {
             const cell = $('<td></td>');
-            cell.attr('id', `${j}-${i}`);
+            cell.attr('id', `${j}-${i}`)
             cell.addClass('cell');
 
             row.append(cell);
@@ -18,31 +26,94 @@ function createGameboard() {
     }
 }
 
-function addFruit() {
-    let coords;
+function toggleOverlay() {
+    $('#button-overlay').toggleClass('hidden');
+}
 
-    function generateRandomCoordinates() {
-        return {
-            x: Math.floor(Math.random() * game.size),
-            y: Math.floor(Math.random() * game.size)
-        };
-    }
-
-    do {
-        coords = generateRandomCoordinates();
-    } while (snake.body.find(cell => cell.x === coords.x && cell.y === coords.y));
-
-    game.fruit = coords;
+function drawFruit(coords) {
     $('.fruit').removeClass('fruit');
     $(`#${coords.x}-${coords.y}`).addClass('fruit');
 }
 
 function drawSnake() {
-    $('td').removeClass('snake');
+    $('.snake').removeClass('snake');
     snake.body.forEach(snakeCell => {
         $(`#${snakeCell.x}-${snakeCell.y}`).addClass('snake');
     });
 }
+
+function updateScore() {
+    $('#score-label').text(`Score: ${game.score}`);
+}
+
+// END RENDERING FUNCTIONS
+
+// BEGIN GAME LIFECYCLE FUNCTIONS
+
+function initGame() {
+    game = {
+        size: 25,
+        dead: false,
+        score: 0,
+        speed: 100
+    };
+
+    snake = {
+        direction: 'right',
+        pendingDirections: [],
+        body: [
+            { x: 2, y: 0 },
+            { x: 1, y: 0 },
+            { x: 0, y: 0 }
+        ]
+    };
+
+    $('#game-board').empty();
+
+    updateScore();
+    createGameboard(game.size);
+    drawSnake(snake);
+    addFruit();
+}
+
+function startGame() {
+    endGame();
+    toggleOverlay();
+    initGame();
+    runGame();
+}
+
+function runGame() {
+    gameLoop = setInterval(() => {
+        const growSnake = checkFruit();
+
+        if (growSnake) {
+            addFruit();
+            game.score += 1;
+            updateScore();
+        }
+
+        moveSnake(growSnake);
+
+        if (hasCollision()) {
+            endGame();
+            return;
+        }
+
+        drawSnake();
+    }, game.speed);
+}
+
+function endGame() {
+    toggleOverlay();
+    clearInterval(gameLoop);
+    gameLoop = null;
+}
+
+// END GAME LIFECYCLE FUNCTIONS
+
+// BEGIN SNAKE FUNCTIONS
+
 
 function getNextCell(head, direction) {
     switch(direction) {
@@ -58,13 +129,21 @@ function getNextCell(head, direction) {
 }
 
 function moveSnake(growSnake) {
-    if (snake.direction.length > 1) {
-        snake.direction.shift();
+    if (snake.pendingDirections.length) {
+        const nextDirection = snake.pendingDirections.shift();
+        const isOpposite =
+            snake.direction === 'left' && nextDirection === 'right' ||
+            snake.direction === 'right' && nextDirection === 'left' ||
+            snake.direction === 'up' && nextDirection === 'down' ||
+            snake.direction === 'down' && nextDirection === 'up';
+
+        if (!isOpposite) {
+            snake.direction = nextDirection;
+        }
     }
 
     const head = snake.body[0];
-    const direction = snake.direction[0];
-    const newHead = getNextCell(head, direction);
+    const newHead = getNextCell(head, snake.direction);
 
     snake.body.unshift(newHead);
 
@@ -88,102 +167,64 @@ function hasCollision() {
         headCount > 1;
 }
 
+// END SNAKE FUNCTIONS
+
+// BEGIN FRUIT FUNCTIONS
+
+function addFruit() {
+    let coords;
+
+    function generateRandomCoordinates() {
+        return {
+            x: Math.floor(Math.random() * game.size),
+            y: Math.floor(Math.random() * game.size)
+        };
+    }
+
+    do {
+        coords = generateRandomCoordinates();
+    } while (snake.body.find(cell => cell.x === coords.x && cell.y === coords.y));
+
+    game.fruit = coords;
+    drawFruit(coords);
+}
+
+
 function checkFruit() {
     return snake.body.find(cell => cell.x === game.fruit.x && cell.y === game.fruit.y);
 }
 
-function addNextDirection(e) {
+// END FRUIT FUNCTIONS
+
+// BEGIN INPUT HANDLING
+
+function onKeyDown(e) {
     e = e || window.event;
 
     switch(e.key) {
         case 'd':
         case 'ArrowRight':
-            snake.direction.push('right');
+            snake.pendingDirections.push('right');
             break;
         case 'a':
         case 'ArrowLeft':
-            snake.direction.push('left');
+            snake.pendingDirections.push('left');
             break;
         case 's':
         case 'ArrowDown':
-            snake.direction.push('down');
+            snake.pendingDirections.push('down');
             break;
         case 'w':
         case 'ArrowUp':
-            snake.direction.push('up');
+            snake.pendingDirections.push('up');
             break;
-        case 'Enter':
+        case ' ':
+            startGame();
+            break;
+        case 'Escape':
             endGame();
             break;
     }
 }
 
-function updateScore() {
-    $('#score-label').text(`Score: ${game.score}`);
-}
-
-function startGame() {
-    $('#button-overlay').addClass('hidden');
-    setUpGame();
-    runGame();
-}
-
-function endGame() {
-    $('#button-overlay').removeClass('hidden');
-    if (gameLoop) {
-        clearInterval(gameLoop);
-        gameLoop = null;
-    }
-}
-
-function setUpGame() {
-    game = {
-        size: 25,
-        dead: false,
-        score: 0,
-        speed: 100
-    };
-
-    snake = {
-        direction: ['right'],
-        body: [
-            { x: 2, y: 0 },
-            { x: 1, y: 0 },
-            { x: 0, y: 0 }
-        ]
-    };
-
-    $('#game-board').empty();
-
-    updateScore();
-    createGameboard(game.size);
-    drawSnake(snake);
-    addFruit();
-}
-
-function runGame() {
-    gameLoop = setInterval(() => {
-        const growSnake = checkFruit();
-        
-        if (growSnake) {
-            addFruit();
-            game.score += 1;
-            updateScore();
-        }
-
-        moveSnake(growSnake);
-
-        if (hasCollision()) {
-            endGame();
-            return;
-        }
-
-        drawSnake();
-    }, game.speed);
-}
-
-$(function() {
-    setUpGame();
-    $(document).keydown(addNextDirection);
-    $('#start-button').click(startGame);
-});
+// END INPUT HANDLING

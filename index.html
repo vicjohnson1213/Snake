@@ -3,16 +3,19 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>The HTML5 Herald</title>
+    <title>Snake</title>
     <link rel="stylesheet" href="styles.css?v=1.0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
 
   <body>
-    <table id="game-board"></table>
-    <span id="score-label"></span>
-    <div id="button-overlay">
-      <button id="start-button">Start Game</button>
+    <div class="title">~~ Classic Snake ~~</div>
+    <div class="game-container">
+      <table id="game-board"></table>
+        <div id="button-overlay">
+          <span id="score-label"></span>
+          <button id="start-button">Start Game</button>
+        </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
